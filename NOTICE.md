@@ -12,9 +12,10 @@ archive. Harness2 is not installed into or integrated with Claude by this repo.
 The optional core remains in the separate agent-controls installation.
 
 Claude Code is proprietary Anthropic software, not covered by our MIT license.
-This repository and its Releases do NOT redistribute its binary. The online
-fetch helper obtains a pinned binary directly from the official Anthropic
-download service for your own subsequent offline installation. Review the
-upstream terms before use: https://github.com/anthropics/claude-code/blob/main/LICENSE.md
+The full transfer archive includes the unmodified official pinned Linux binary,
+publisher manifest, signature and verification key. Copyright remains Anthropic PBC;
+no license to that software is granted by this project's MIT license. The builder
+fetches it directly from the official Anthropic download service. Upstream terms:
+https://github.com/anthropics/claude-code/blob/main/LICENSE.md
 
 No weights, accounts, tokens, user logs or corporate source are distributed.

@@ -5,6 +5,9 @@
 В полном архиве уже находятся Claude Code 2.1.304 Linux amd64, Numbat 0.3.0,
 LlamaFirewall 1.0.3, wheels/CPU runtime и все установщики.
 
+**[Скачать полный архив и SHA-256 из последнего Release](https://github.com/bogdanzolotovski-blip/claude-ollama-airgap/releases/latest)**
+Выбирайте `claude-ollama-debian13-amd64-full.tar.gz` и одноимённый `.sha256`.
+
 ## Команды на целевом Debian 13.7 / Trixie
 
 Под обычным пользователем, без sudo, с Python 3.13:
@@ -34,14 +37,11 @@ claude-ollama
 
 ## Что находится в публичном GitHub
 
-Исходники, установщики, инструкция, проверенный redistributable controls-архив и
-CI evidence. `claude-ollama-setup.zip` — **только исходники настройки**, он не
-является полным комплектом для изолированного сервера.
-
-Полный архив с proprietary Claude native binary готовится для персонального
-переноса, отдельно от публичного Release. Не принимайте скачивание только setup.zip
-за завершённую подготовку airgap. В данном рабочем сеансе полный архив подготовлен
-локально и передаётся пользователю отдельно.
+Полный архив для переноса, его checksum, исходники, установщики, инструкция и
+CI evidence. `claude-ollama-setup.zip` предназначен для сборщика и содержит
+исходники настройки. Для изолированного сервера скачивайте именно `full.tar.gz`.
+Claude Code внутри полного комплекта остаётся proprietary software Anthropic;
+MIT-лицензия нашего кода на него не распространяется. См. NOTICE.md.
 
 ## Контроль и проверки
 

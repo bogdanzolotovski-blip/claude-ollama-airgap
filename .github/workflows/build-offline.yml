@@ -19,7 +19,7 @@ jobs:
           mkdir -p build/full-kit
           cp dist/agent-controls-debian13-amd64-py313.tar.gz* build/full-kit/
           cp -r build/claude/claude-linux-x64 build/full-kit/
-          python3 scripts/build_full_kit.py --input build/full-kit --prepare-only
+          python3 scripts/build_full_kit.py --input build/full-kit --output dist/claude-ollama-debian13-amd64-full.tar.gz
       - name: Verify official Claude manifest GPG signature
         run: |
           export GNUPGHOME="$RUNNER_TEMP/claude-gpg"
