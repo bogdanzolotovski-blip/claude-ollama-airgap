@@ -1,0 +1,6 @@
+.git
+offline
+build
+dist
+test-results
+**/__pycache__

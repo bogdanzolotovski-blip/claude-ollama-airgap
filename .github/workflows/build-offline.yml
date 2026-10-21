@@ -1,0 +1,65 @@
+name: Verify Claude Ollama offline controls
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: claude-offline-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Fetch pinned redistributable controls and private test-only Claude binary
+        run: |
+          python3 fetch_offline.py --controls-only --output dist
+          python3 fetch_offline.py --claude-only --output build/claude
+      - name: Verify official Claude manifest GPG signature
+        run: |
+          export GNUPGHOME="$RUNNER_TEMP/claude-gpg"
+          mkdir -m 700 "$GNUPGHOME"
+          gpg --batch --import build/claude/claude-linux-x64/claude-code.asc
+          gpg --batch --status-fd 1 --verify \
+            build/claude/claude-linux-x64/manifest.json.sig \
+            build/claude/claude-linux-x64/manifest.json > "$RUNNER_TEMP/signature-status"
+          grep '^\[GNUPG:\] VALIDSIG ' "$RUNNER_TEMP/signature-status" | grep '31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE'
+      - name: Unit tests
+        run: python3 -m unittest discover -s tests -p test_hooks.py -v
+      - name: Build clean Debian test image
+        run: docker build -f tests/Dockerfile -t claude-airgap-clean .
+      - name: Actual Claude hooks, no root or external network
+        run: |
+          mkdir -p test-results
+          chmod 777 test-results
+          docker run --rm --network none -v "$PWD:/src:ro" -v "$PWD/test-results:/results" claude-airgap-clean
+      - name: Create small source/setup zip (NO Claude binary)
+        run: |
+          python3 - <<'PY'
+          import hashlib,pathlib,subprocess,zipfile
+          root=pathlib.Path('.')
+          target=root/'dist/claude-ollama-setup.zip'
+          with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as archive:
+              for name in subprocess.check_output(['git','ls-files'],text=True).splitlines():
+                  archive.write(name,name)
+          (root/'dist/claude-ollama-setup.zip.sha256').write_text(hashlib.sha256(target.read_bytes()).hexdigest()+'  '+target.name+'\n')
+          PY
+      - name: Upload evidence and redistributable assets only
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: claude-ollama-offline-controls
+          path: |
+            dist/
+            test-results/offline-test.json
+          compression-level: 0
+          retention-days: 14
+      - name: Publish after successful mandatory tests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "claude-controls-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            dist/* test-results/offline-test.json --target "$GITHUB_SHA" \
+            --title "Claude Code + Ollama / Debian 13 offline controls" --notes-file RELEASE_NOTES.md

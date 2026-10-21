@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "debian": "13 (trixie)",
+  "python": "3.13",
+  "architecture": "amd64",
+  "claude": "2.1.304",
+  "claude_linux_x64_sha256": "ea0f135784631619a7a409d07322ecec964f9cc4fd377508ed1ba3f141f27912",
+  "claude_download_root": "https://downloads.claude.ai/claude-code-releases",
+  "claude_signing_fingerprint": "31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE",
+  "controls_release": "https://github.com/bogdanzolotovski-blip/opencode-security-airgap/releases/download/agent-controls-39397658097-1",
+  "controls_archive": "agent-controls-debian13-amd64-py313.tar.gz",
+  "controls_sha256": "0d26859210033db0c27da3cba56b6b9da7d55dc1a24388c7ce475be3d4a91013",
+  "numbat": "0.3.0",
+  "llamafirewall": "1.0.3"
+}

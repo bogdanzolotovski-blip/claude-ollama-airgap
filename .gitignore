@@ -1,0 +1,11 @@
+offline/
+dist/
+build/
+test-results/
+__pycache__/
+*.pyc
+*.whl
+*.tar.gz
+claude
+.env
+*.ndjson
