@@ -1,8 +1,10 @@
 # Claude Code CLI + Ollama / Debian 13 amd64 offline controls
 
-Download `claude-ollama-setup.zip`, extract and run on an internet-connected computer:
-`python fetch_offline.py --output offline`. Transfer the entire `offline` folder to Debian.
-See README.md for rootless native installation, Ollama connection and opt-in hooks.
+This public Release contains setup sources + redistributable controls, NOT the full
+personal transfer archive. The full prepared kit includes the official Claude binary
+and is transferred separately. No downloads are run on the target Debian.
+Full-kit installation: extract `claude-ollama-debian13-amd64-full.tar.gz`, then
+`python3 install_all_offline.py`. See AIRGAP_INSTALL_RU.md.
 
 Claude Code is fetched directly from Anthropic and is NOT redistributed in this Release.
 Redistributable controls are included with their original manifest and licenses.

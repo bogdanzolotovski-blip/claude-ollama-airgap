@@ -61,7 +61,9 @@ def configure(args):
     command = shlex.quote(base_python) + " -I " + shlex.quote(str(root / "firewall_hook.py"))
     updated = merge(settings, command, args.mode)
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    shutil.copy2(Path(__file__).with_name("firewall_hook.py"), root / "firewall_hook.py")
+    hook_source = Path(__file__).with_name("firewall_hook.py")
+    if hook_source.resolve() != (root / "firewall_hook.py").resolve():
+        shutil.copy2(hook_source, root / "firewall_hook.py")
     atomic_json(root / "firewall.json", {"mode": args.mode, "scanner": str(scanner)})
     if settings_path.exists():
         backup = settings_path.with_name(settings_path.name + ".backup-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ"))

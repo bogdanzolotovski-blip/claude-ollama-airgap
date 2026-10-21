@@ -11,9 +11,28 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from configure_claude import merge
 from firewall_hook import evaluate, verdict
+from bundle_common import sha256
+from verify_kit import verify
 
 
 class HookTests(unittest.TestCase):
+    def test_complete_kit_inventory_and_tamper(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "claude-linux-x64").mkdir()
+            (root / "claude-linux-x64/claude").write_bytes(b"fixture native")
+            (root / "controls.bin").write_bytes(b"fixture controls")
+            (root / "versions.lock.json").write_text(json.dumps({
+                "controls_archive": "controls.bin", "controls_sha256": sha256(root / "controls.bin"),
+                "claude_linux_x64_sha256": sha256(root / "claude-linux-x64/claude")}))
+            manifest = {"kind": "claude-ollama-complete-offline", "files": {
+                p.relative_to(root).as_posix(): sha256(p) for p in root.rglob("*") if p.is_file()}}
+            (root / "KIT-MANIFEST.json").write_text(json.dumps(manifest))
+            verify(root)
+            (root / "controls.bin").write_bytes(b"tampered")
+            with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
+                verify(root)
+
     def test_preserving_idempotent_merge(self):
         original = {"env": {"EXISTING": "keep"}, "permissions": {"ask": ["Bash"]},
                     "hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "numbat"}]}],

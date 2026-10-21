@@ -17,10 +17,7 @@ assert os.geteuid() != 0
 assert not shutil.which("sudo") and not shutil.which("apt")
 assert subprocess.run([sys.executable, "-m", "pip", "--version"], capture_output=True).returncode != 0
 subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", str(ROOT / "tests"), "-p", "test_hooks.py", "-v"], check=True)
-subprocess.run([sys.executable, str(ROOT / "install_agent_controls.py"), "--bundle",
-                str(ROOT / "dist/agent-controls-debian13-amd64-py313.tar.gz")], check=True)
-subprocess.run([sys.executable, str(ROOT / "install_claude_offline.py"), "--binary",
-                str(ROOT / "build/claude/claude-linux-x64/claude")], check=True)
+subprocess.run([sys.executable, str(ROOT / "build/full-kit/install_all_offline.py")], check=True)
 claude = str(HOME / ".local/bin/claude")
 numbat = str(HOME / "agent-controls/bin/numbat")
 records = HOME / ".numbat/live.ndjson"
@@ -28,7 +25,7 @@ subprocess.run([numbat, "hook", "install", "--agent", "claude", "--emit", "all",
                 "--output", "file", "--output-file", str(records)], check=True)
 settings = HOME / ".claude/settings.json"
 before = json.loads(settings.read_text())
-configure = [sys.executable, str(ROOT / "configure_claude.py"), "--claude", claude]
+configure = [sys.executable, str(HOME / ".local/share/claude-ollama-airgap/configure_claude.py"), "--claude", claude]
 subprocess.run(configure + ["--mode", "monitor"], check=True)
 assert json.loads(settings.read_text())["hooks"].get("PostToolUse") == before["hooks"].get("PostToolUse")
 work = HOME / "fixture"
@@ -92,7 +89,7 @@ env = dict(os.environ, OLLAMA_BASE_URL="http://127.0.0.1:" + str(server.server_p
 # Non-interactive explicit Bash approval is limited to this synthetic test workspace.
 def turn(command):
     API.command = command
-    result = subprocess.run(["sh", str(ROOT / "run-claude-ollama.sh"), "-p", "Run the fixture action then stop.",
+    result = subprocess.run([str(HOME / ".local/bin/claude-ollama"), "-p", "Run the fixture action then stop.",
                              "--allowedTools", "Bash", "--max-turns", "3", "--no-session-persistence"],
                             cwd=work, env=env, text=True, capture_output=True, timeout=120)
     assert result.returncode == 0, result.stderr[-6000:] + result.stdout[-6000:]
@@ -129,7 +126,7 @@ try:
     Path("/results/offline-test.json").write_text(json.dumps({
         "status": "PASS", "os": "Debian 13 amd64", "network": "docker --network none; loopback mock API only",
         "root": False, "system_pip": False, "actual_claude_cli": "2.1.304",
-        "checks": ["controls install", "native Claude offline install", "real Claude hook lifecycle",
+        "checks": ["complete kit one-command offline install", "controls install", "native Claude offline install", "real Claude hook lifecycle",
                    "Numbat records", "monitor action executes", "enforce blocks action",
                    "safe action executes", "missing scanner blocks", "missing hook onFailure:block"],
         "not_verified": ["real Ollama server/model", "user-host managed settings", "interactive onboarding", "VS Code extension"]

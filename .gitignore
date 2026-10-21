@@ -1,5 +1,6 @@
 offline/
 dist/
+dist-local/
 build/
 test-results/
 __pycache__/
