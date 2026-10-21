@@ -35,6 +35,8 @@ claude-ollama
 
 **[Полное руководство: перенос, проверки, Numbat, LlamaFirewall](AIRGAP_INSTALL_RU.md)**
 
+**[Пошаговая настройка Numbat и LlamaFirewall для уже работающего Claude CLI](CLAUDE_NUMBAT_LLAMA_FIREWALL_RU.md)**
+
 ## Что находится в публичном GitHub
 
 Полный архив для переноса, его checksum, исходники, установщики, инструкция и
