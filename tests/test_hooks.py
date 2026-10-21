@@ -53,6 +53,9 @@ class HookTests(unittest.TestCase):
             shutil.copy2(ROOT / "firewall_hook.py", hook)
             response = subprocess.run([sys.executable, str(hook)], input="{}", text=True, capture_output=True, check=True)
             self.assertEqual(json.loads(response.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
+            (Path(tmp) / "firewall.json").write_text('{"mode":"invalid","scanner":"unused"}')
+            response = subprocess.run([sys.executable, str(hook)], input="{}", text=True, capture_output=True, check=True)
+            self.assertEqual(json.loads(response.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
 
 
 if __name__ == "__main__":

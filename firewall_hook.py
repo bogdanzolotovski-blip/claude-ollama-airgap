@@ -40,9 +40,10 @@ def main():
     mode, decision = "enforce", "error"  # Bad/missing config does not silently disable the gate.
     try:
         config = json.loads((root / "firewall.json").read_text())
-        mode = config["mode"]
-        if mode not in ("monitor", "enforce"):
+        configured_mode = config["mode"]
+        if configured_mode not in ("monitor", "enforce"):
             raise ValueError("Invalid mode")
+        mode = configured_mode
         raw = sys.stdin.buffer.read(LIMIT + 1)
         if len(raw) > LIMIT:
             raise ValueError("Oversized hook payload")
