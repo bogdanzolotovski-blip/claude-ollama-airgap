@@ -25,9 +25,9 @@ def build(folder, output, prepare_only=False):
         if not (folder / name).is_file():
             raise ValueError("Complete local input missing: " + name)
     for name in ("install_all_offline.py", "verify_kit.py", "bundle_common.py", "install_agent_controls.py",
-                 "install_claude_offline.py", "configure_claude.py", "firewall_hook.py", "verify_ollama.py",
+                 "install_claude_offline.py", "configure_claude.py", "firewall_hook.py", "pdn_scan.py", "pdn_policy.json", "verify_ollama.py",
                  "run-claude-ollama.sh", "versions.lock.json", "README.md", "AIRGAP_INSTALL_RU.md",
-                 "LICENSE", "NOTICE.md"):
+                 "LICENSE", "NOTICE.md", "NUMBAT_LLAMA_PILOT_RU.md"):
         shutil.copy2(ROOT / name, folder / name)
     files = {}
     for path in sorted(folder.rglob("*")):

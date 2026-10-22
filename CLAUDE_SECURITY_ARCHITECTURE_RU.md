@@ -1,5 +1,10 @@
 # Claude Code: Numbat, LlamaFirewall, ПДн, LLM-судья и SIEM
 
+> Обновление: [актуальный пилот без LLM-судьи](NUMBAT_LLAMA_PILOT_RU.md) добавляет
+> опциональный UserPromptSubmit и локальные правила ПДн. Описанное ниже исходное
+> ограничение только PreToolUse относится к прежней настройке и сохраняется без
+> нового флага `--check-prompts`. Полного DLP всего контекста по-прежнему нет.
+
 Дата проверки: 22 октября 2026 года. Цель: Debian 13 Trixie amd64,
 air gap, Claude Code CLI и уже перенесённый офлайн-комплект.
 Версии комплекта: Claude Code 2.1.304, Numbat 0.3.0, LlamaFirewall 1.0.3.

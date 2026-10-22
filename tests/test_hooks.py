@@ -13,9 +13,56 @@ from configure_claude import merge
 from firewall_hook import evaluate, verdict
 from bundle_common import sha256
 from verify_kit import verify
+from pdn_scan import local_findings, scan, RULES
 
 
 class HookTests(unittest.TestCase):
+    def test_pdn_labeled_fixtures_and_non_pii(self):
+        samples = {"ru_passport_labeled": "Паспорт: 00 00 000000", "ru_snils_labeled": "СНИЛС: 000-000-000 00",
+                   "ru_inn_labeled": "ИНН: 000000000000", "ru_phone": "+7 (000) 000-00-00",
+                   "private_key": "-----BEGIN PRIVATE KEY-----"}
+        for rule, text in samples.items():
+            with self.subTest(rule=rule):
+                self.assertIn(rule, local_findings(text, list(RULES)))
+        for text in ("Explain a Python loop", "build 123456789012", "ИНН: 123", "IPv4 192.168.1.1"):
+            self.assertEqual(local_findings(text, list(RULES)), [])
+        self.assertIn("ru_inn_labeled", local_findings("ИНН: ００００００００００００", list(RULES)))
+        with self.assertRaises(ValueError):
+            local_findings("safe", ["unknown"])
+
+    def test_pdn_scanner_chain_and_error_propagation(self):
+        policy = {"version": 1, "enabled_rules": list(RULES)}
+        with patch("pdn_scan.subprocess.run") as process:
+            result = scan("ИНН: 000000000000", policy, "scanner")
+            self.assertEqual(result["decision"], "block")
+            process.assert_not_called()
+        with patch("pdn_scan.subprocess.run", return_value=subprocess.CompletedProcess([], 0,
+                   '{"status":"success","decision":"allow","reason":"must not be exported"}', "")):
+            result = scan("safe fixture", policy, "scanner")
+            self.assertEqual(result["decision"], "allow")
+            self.assertNotIn("reason", result)
+        for output in ('invalid', '{"status":"error","decision":"allow"}', '{"status":"success","decision":"unknown"}'):
+            with patch("pdn_scan.subprocess.run", return_value=subprocess.CompletedProcess([], 0, output, "")):
+                with self.assertRaises(ValueError):
+                    scan("safe fixture", policy, "scanner")
+        with patch("pdn_scan.subprocess.run", side_effect=subprocess.TimeoutExpired("scanner", 20)):
+            with self.assertRaises(subprocess.TimeoutExpired):
+                scan("safe fixture", policy, "scanner")
+
+    def test_prompt_hook_protocol_and_preserving_merge(self):
+        settings = {"env": {"EXISTING": "keep"}, "hooks": {"UserPromptSubmit": [{"hooks": [{"command": "numbat"}]}]}}
+        for _ in range(2):
+            settings = merge(settings, "/our/hook --event UserPromptSubmit", "enforce", "UserPromptSubmit")
+        self.assertEqual(len(settings["hooks"]["UserPromptSubmit"]), 2)
+        self.assertEqual(settings["env"], {"EXISTING": "keep"})
+        self.assertEqual(verdict("block", "enforce", "UserPromptSubmit")["decision"], "block")
+        self.assertEqual(verdict("block", "monitor", "UserPromptSubmit"), {})
+        with patch("firewall_hook.subprocess.run", return_value=subprocess.CompletedProcess([], 0, '{"status":"success","decision":"block"}', "")) as process:
+            self.assertEqual(evaluate({"hook_event_name": "UserPromptSubmit", "prompt": "ИНН: 000000000000"}, "scanner"), "block")
+            self.assertEqual(json.loads(process.call_args.kwargs["input"])["text"], "ИНН: 000000000000")
+            evaluate({"hook_event_name": "PreToolUse", "tool_input": {"nested": ["ИНН:\n000000000000"]}}, "scanner")
+            self.assertIn("ИНН:\n000000000000", json.loads(process.call_args.kwargs["input"])["text"])
+
     def test_complete_kit_inventory_and_tamper(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

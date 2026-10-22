@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "enabled_rules": ["ru_passport_labeled", "ru_snils_labeled", "ru_inn_labeled", "ru_phone", "private_key"],
+  "description": "Conservative pilot rules. Labeled identifiers are heuristics, not proof of real personal data. No LLM or network."
+}

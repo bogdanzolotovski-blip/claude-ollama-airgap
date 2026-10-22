@@ -107,6 +107,28 @@ try:
     turn("printf safe > " + str(safe_marker))
     assert safe_marker.exists(), "Safe action was unexpectedly blocked"
     hookroot = HOME / ".local/share/claude-ollama-airgap"
+    old_settings = settings.read_text()
+    for _ in range(2):
+        subprocess.run(configure + ["--mode", "enforce", "--local-pdn", "--check-prompts"], check=True)
+    subprocess.run([str(HOME / ".local/bin/llama-firewall"), "--self-test"], check=True)
+    pdn_marker = work / "pdn-marker"
+    turn("printf '%s' 'ИНН: 000000000000' > " + str(pdn_marker))
+    assert not pdn_marker.exists(), "Local PII rule did not block the tool action"
+    count_before = API.message_calls
+    blocked_prompt = subprocess.run([str(HOME / ".local/bin/claude-ollama"), "-p", "Паспорт: 00 00 000000",
+                                     "--no-session-persistence"], cwd=work, env=env, text=True, capture_output=True, timeout=120)
+    assert API.message_calls == count_before, "Blocked prompt reached the inference endpoint"
+    prompt_logs = [json.loads(line) for line in (hookroot / "firewall.ndjson").read_text().splitlines()]
+    assert any(x["event"] == "UserPromptSubmit" and x["decision"] == "block" for x in prompt_logs)
+    assert sum("firewall_hook.py" in h.get("command", "") for group in json.loads(settings.read_text())["hooks"]["UserPromptSubmit"] for h in group["hooks"]) == 1
+    prompt_config = json.loads((hookroot / "firewall.json").read_text())
+    (hookroot / "firewall.json").write_text(json.dumps(dict(prompt_config, scanner="/missing/scanner")))
+    subprocess.run([str(HOME / ".local/bin/claude-ollama"), "-p", "Safe fixture prompt",
+                    "--no-session-persistence"], cwd=work, env=env, text=True, capture_output=True, timeout=120)
+    assert API.message_calls == count_before, "Scanner failure allowed a prompt to reach inference"
+    # Keep earlier PreToolUse failure cases distinct from prompt interception.
+    settings.write_text(old_settings)
+    subprocess.run(configure + ["--mode", "enforce"], check=True)
     hookconfig = json.loads((hookroot / "firewall.json").read_text())
     hookconfig["scanner"] = "/does-not-exist/scanner"
     (hookroot / "firewall.json").write_text(json.dumps(hookconfig))
@@ -128,7 +150,9 @@ try:
         "root": False, "system_pip": False, "actual_claude_cli": "2.1.304",
         "checks": ["complete kit one-command offline install", "controls install", "native Claude offline install", "real Claude hook lifecycle",
                    "Numbat records", "monitor action executes", "enforce blocks action",
-                   "safe action executes", "missing scanner blocks", "missing hook onFailure:block"],
+                   "safe action executes", "missing scanner blocks", "missing hook onFailure:block",
+                   "local PII scanner self-test", "PII tool action blocked", "PII user prompt blocked before inference",
+                   "prompt scanner failure blocks before inference", "repeated prompt hook configuration"],
         "not_verified": ["real Ollama server/model", "user-host managed settings", "interactive onboarding", "VS Code extension"]
     }, indent=2) + "\n")
     print("PASS: actual Claude Code + Numbat + LlamaFirewall, rootless without external network")

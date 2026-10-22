@@ -40,6 +40,7 @@ jobs:
           docker run --rm --network none -v "$PWD:/src:ro" -v "$PWD/test-results:/results" claude-airgap-clean
       - name: Create small source/setup zip (NO Claude binary)
         run: |
+          python3 scripts/build_controls_update.py
           python3 - <<'PY'
           import hashlib,pathlib,subprocess,zipfile
           root=pathlib.Path('.')

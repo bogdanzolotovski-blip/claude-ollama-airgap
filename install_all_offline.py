@@ -35,7 +35,9 @@ def install(force_target=False):
                     str(root / "claude-linux-x64/claude")], check=True, env=env)
     support = Path.home() / ".local/share/claude-ollama-airgap"
     support.mkdir(parents=True, exist_ok=True)
-    for name in ("configure_claude.py", "firewall_hook.py", "verify_ollama.py", "run-claude-ollama.sh"):
+    for name in ("configure_claude.py", "firewall_hook.py", "pdn_scan.py", "pdn_policy.json", "verify_ollama.py", "run-claude-ollama.sh"):
+        if name == "pdn_policy.json" and (support / name).exists():
+            continue
         shutil.copy2(root / name, support / name)
     binpath = Path.home() / ".local/bin/claude-ollama"
     # Preserve an unrelated launcher; never silently overwrite arbitrary user files.
