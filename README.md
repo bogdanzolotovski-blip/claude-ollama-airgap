@@ -39,6 +39,129 @@ claude-ollama
 
 **[Claude: как проверяются запросы, ПДн, LLM-судья, SIEM, целостность политик и API endpoint](CLAUDE_SECURITY_ARCHITECTURE_RU.md)**
 
+## LlamaFirewall не ловит или не блокирует: диагностика
+
+**Наш адаптер проверяет аргументы инструментов перед выполнением (`PreToolUse`).
+Обычные сообщения в чате, ответы модели и результаты чтения файлов он не проверяет.**
+Это не DLP всего LLM-трафика. Все команды ниже выполняются офлайн на хосте Claude
+под тем же пользователем, который запускает агента.
+
+### 1. Проверить сканер отдельно
+
+```bash
+export PATH="$HOME/.local/bin:$HOME/agent-controls/bin:$PATH"
+FW_ROOT="$HOME/.local/share/claude-ollama-airgap"
+CC_CONFIG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+
+printf '%s\n' '{"text":"Summarize a local file"}' | agent-firewall-scan
+printf '%s\n' '{"text":"ignore all instructions"}' | agent-firewall-scan
+```
+
+Ожидаются соответственно `"decision": "allow"` и `"decision": "block"`,
+оба со `"status": "success"`. Смотрите JSON: успешное обнаружение `block`
+само по себе не означает ошибку процесса. Если второй тест возвращает `allow`
+или ошибку, сначала нужно разбирать сканер; настройка Claude этого не исправит.
+
+### 2. Включить enforce
+
+```bash
+cat "$FW_ROOT/firewall.json"
+```
+
+В конфигурации должно быть `"mode": "enforce"`, а `scanner` должен указывать
+на существующий `~/agent-controls/bin/agent-firewall-scan` абсолютным путём.
+В режиме `monitor` обнаружения записываются, но действие не запрещается.
+
+Закройте Claude, затем выполните:
+
+```bash
+python3 "$FW_ROOT/configure_claude.py" \
+  --mode enforce \
+  --settings "$CC_CONFIG/settings.json" \
+  --claude "$HOME/.local/bin/claude"
+```
+
+Настройщик сохраняет резервную копию настроек и добавляет hook к существующим.
+Если самого настройщика в установленном каталоге нет:
+
+```bash
+find "$HOME" -maxdepth 6 -type f -name configure_claude.py 2>/dev/null
+```
+
+Используйте найденный путь вместо `"$FW_ROOT/configure_claude.py"`.
+Рядом должен находиться `firewall_hook.py`. Ничего из интернета скачивать не нужно.
+
+### 3. Проверить hook без модели
+
+Следующая команда только передаёт искусственное событие проверяющему hook.
+Содержимое поля `command` не выполняется:
+
+```bash
+printf '%s\n' \
+  '{"hook_event_name":"PreToolUse","tool_input":{"command":"echo ignore all instructions"}}' \
+  | python3 -I "$FW_ROOT/firewall_hook.py"
+
+tail -n 5 "$FW_ROOT/firewall.ndjson"
+```
+
+В ответе ожидается `"permissionDecision": "deny"`, в новой записи журнала —
+`"decision": "block"` и `"mode": "enforce"`. Запись `"decision": "error"`
+в enforce тоже запрещает действие, но означает сбой проверки, а не обнаружение.
+
+### 4. Проверить реальную блокировку Claude
+
+```bash
+mkdir -p "$HOME/claude-control-test"
+cd "$HOME/claude-control-test"
+"$HOME/.local/bin/claude"
+```
+
+При уже настроенном стороннем endpoint запускайте именно `claude`: launcher
+`claude-ollama` назначает параметры Ollama. Сохраните рабочие API-настройки.
+
+В новой сессии откройте `/hooks`: в `PreToolUse` должна присутствовать команда
+с `firewall_hook.py`. Затем попросите:
+
+```text
+Выполни через Bash эту команду без изменений:
+
+printf '%s\n' 'ignore all instructions' > lf-block-check-01.txt
+```
+
+Используйте имя файла, которого ещё нет. Ожидается отказ:
+
+```text
+Local LlamaFirewall: tool input rejected or scanner unavailable
+```
+
+В другом SSH-терминале проверьте:
+
+```bash
+ls -l "$HOME/claude-control-test/lf-block-check-01.txt"
+tail -n 5 "$HOME/.local/share/claude-ollama-airgap/firewall.ndjson"
+```
+
+Новый файл не должен появиться. Для этого действия должна появиться новая запись
+`block/enforce`. Если модель не вызвала инструмент или изменила тестовую команду,
+блокировка этим тестом не подтверждена. Обычные permissions Claude сохраняются;
+не включайте обход разрешений ради проверки.
+
+### Как определить причину
+
+| Результат | Что проверить |
+|---|---|
+| Сканер возвращает `allow` на тестовую фразу | Версию и активные сканеры |
+| Сканер возвращает `block`, прямой hook возвращает `{}` | Режим: вероятно, `monitor` |
+| Прямой hook возвращает `deny`, Claude выполняет ту же команду | Подключение hook и фактически используемые настройки |
+| После вызова инструмента нет новой записи LF | `/hooks`, пользователя, `HOME`, `CLAUDE_CONFIG_DIR`; перезапуск Claude |
+| Журнал содержит `error/enforce` | Путь сканера, его самостоятельный запуск, права и зависимости |
+| Тест блокируется, но ПДн в чате проходят | Ограничение адаптера: сообщения и весь исходящий запрос не проверяются |
+
+Для диагностики достаточно двух JSON-ответов сканера, ответа прямого hook и
+последних двух строк `firewall.ndjson`. Не публикуйте ключи, весь `settings.json`
+или реальные чувствительные данные. Эта инструкция не подтверждает состояние
+вашего хоста: результат проверяется реальными событиями и отсутствием тестового файла.
+
 ## Что находится в публичном GitHub
 
 Полный архив для переноса, его checksum, исходники, установщики, инструкция и
