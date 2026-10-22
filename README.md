@@ -37,6 +37,8 @@ claude-ollama
 
 **[Пошаговая настройка Numbat и LlamaFirewall для уже работающего Claude CLI](CLAUDE_NUMBAT_LLAMA_FIREWALL_RU.md)**
 
+**[Claude: как проверяются запросы, ПДн, LLM-судья, SIEM, целостность политик и API endpoint](CLAUDE_SECURITY_ARCHITECTURE_RU.md)**
+
 ## Что находится в публичном GitHub
 
 Полный архив для переноса, его checksum, исходники, установщики, инструкция и
